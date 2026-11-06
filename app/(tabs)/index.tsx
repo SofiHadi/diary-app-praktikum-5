@@ -1,0 +1,86 @@
+import { useRouter } from "expo-router";
+import { useMemo, useState } from "react";
+import { FlatList, StyleSheet, Text, TextInput, View } from "react-native";
+import DiaryCard from "../../src/components/DiaryCard";
+import { useEntries } from "../../src/context/EntriesContext";
+import { COLORS, SPACE, TYPO } from "../../src/styles/tokens";
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const { entries, likedIds, toggleLike } = useEntries();
+  const [query, setQuery] = useState("");
+
+  const data = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return entries;
+
+    return entries.filter((entry) => {
+      // Pastikan field ada sebelum memanggil toLowerCase() untuk mencegah crash
+      const titleMatch = (entry.title || "").toLowerCase().includes(q);
+      const previewMatch = (entry.preview || "").toLowerCase().includes(q);
+      const dateMatch = (entry.date || "").toLowerCase().includes(q);
+
+      return titleMatch || previewMatch || dateMatch;
+    });
+  }, [entries, query]);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.header}>Buku Harian</Text>
+
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Cari entri..."
+        style={styles.search}
+      />
+
+      <FlatList
+        data={data}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => (
+          <DiaryCard
+            title={item.title}
+            date={item.date}
+            preview={item.preview}
+            moodImage={item.moodImage}
+            liked={likedIds.has(item.id)}
+            onToggleLike={() => toggleLike(item.id)}
+            onPress={() =>
+              router.push({
+                pathname: "/detail/[id]",
+                params: { id: String(item.id) },
+              })
+            }
+          />
+        )}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: SPACE.l,
+    backgroundColor: COLORS.surface,
+  },
+  header: {
+    fontSize: TYPO.h1,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: SPACE.m,
+  },
+  search: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: SPACE.m,
+  },
+  list: {
+    gap: SPACE.m,
+    paddingBottom: SPACE.xl,
+  },
+});
